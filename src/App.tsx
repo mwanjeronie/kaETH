@@ -1,8 +1,12 @@
 import { ExchangeComponent } from "@/components/exchange-component"
+import { HowItWorks } from "@/components/how-it-works"
+import { SupportedChains } from "@/components/supported-chains"
 
-export default function Home() {
+// Pure React functional component
+export default function App() {
   return (
     <div className="flex min-h-screen flex-col">
+      
       <main className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-background/80 py-12">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-center">
@@ -17,6 +21,13 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <HowItWorks />
+      <SupportedChains />
+      <footer className="border-t py-6">
+        <div className="container px-4 md:px-6 text-center text-sm text-muted-foreground">
+          <p>© 2025 kaETH. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   )
 }

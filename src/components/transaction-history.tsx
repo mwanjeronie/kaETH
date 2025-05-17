@@ -7,8 +7,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowRight, ExternalLink, Search } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+// Helper function for Badge styling
+const getBadgeProps = (
+  status: string,
+): { variant: "default" | "secondary" | "destructive" | "outline"; className: string; label: string } => {
+  switch (status) {
+    case "completed":
+      return {
+        variant: "default", // Updated to a valid variant
+        className: "bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-500",
+        label: "Completed",
+      }
+    case "in progress":
+      return {
+        variant: "secondary", // Updated to a valid variant
+        className: "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20 hover:text-yellow-500",
+        label: "In Progress",
+      }
+    case "failed":
+      return {
+        variant: "destructive", // Updated to a valid variant
+        className: "bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500",
+        label: "Failed",
+      }
+    default:
+      return {
+        variant: "outline", // Fallback to a neutral variant
+        className: "bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 hover:text-gray-500",
+        label: "Unknown",
+      }
+  }
+}
 export function TransactionHistory() {
-  // Mock data for transactions
   const transactions = [
     {
       id: "tx1",
@@ -130,63 +160,46 @@ export function TransactionHistory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {tx.fromAmount} {tx.fromAsset}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{tx.fromChain}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {tx.toAmount} {tx.toAsset}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{tx.toChain}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            tx.status === "completed"
-                              ? "success"
-                              : tx.status === "in progress"
-                                ? "outline"
-                                : "destructive"
-                          }
-                          className={
-                            tx.status === "completed"
-                              ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-500"
-                              : tx.status === "failed"
-                                ? "bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500"
-                                : ""
-                          }
-                        >
-                          {tx.status === "completed"
-                            ? "Completed"
-                            : tx.status === "in progress"
-                              ? "In Progress"
-                              : "Failed"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{tx.time}</TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs">{tx.txHash}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <ExternalLink className="h-4 w-4" />
-                          <span className="sr-only">View transaction</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {transactions.map((tx) => {
+                    const { variant, className, label } = getBadgeProps(tx.status)
+                    return (
+                      <TableRow key={tx.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {tx.fromAmount} {tx.fromAsset}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{tx.fromChain}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {tx.toAmount} {tx.toAsset}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{tx.toChain}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={variant} className={className}>
+                            {label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{tx.time}</TableCell>
+                        <TableCell>
+                          <span className="font-mono text-xs">{tx.txHash}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" aria-label={`View transaction ${tx.txHash}`}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -206,63 +219,46 @@ export function TransactionHistory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.slice(0, 3).map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {tx.fromAmount} {tx.fromAsset}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{tx.fromChain}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {tx.toAmount} {tx.toAsset}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{tx.toChain}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            tx.status === "completed"
-                              ? "success"
-                              : tx.status === "in progress"
-                                ? "outline"
-                                : "destructive"
-                          }
-                          className={
-                            tx.status === "completed"
-                              ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-500"
-                              : tx.status === "failed"
-                                ? "bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500"
-                                : ""
-                          }
-                        >
-                          {tx.status === "completed"
-                            ? "Completed"
-                            : tx.status === "in progress"
-                              ? "In Progress"
-                              : "Failed"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{tx.time}</TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs">{tx.txHash}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <ExternalLink className="h-4 w-4" />
-                          <span className="sr-only">View transaction</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {transactions.slice(0, 3).map((tx) => {
+                    const { variant, className, label } = getBadgeProps(tx.status)
+                    return (
+                      <TableRow key={tx.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {tx.fromAmount} {tx.fromAsset}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{tx.fromChain}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {tx.toAmount} {tx.toAsset}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{tx.toChain}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={variant} className={className}>
+                            {label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{tx.time}</TableCell>
+                        <TableCell>
+                          <span className="font-mono text-xs">{tx.txHash}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" aria-label={`View transaction ${tx.txHash}`}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -282,63 +278,46 @@ export function TransactionHistory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.slice(3, 6).map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {tx.fromAmount} {tx.fromAsset}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{tx.fromChain}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
-                            {tx.toAmount} {tx.toAsset}
-                          </span>
-                          <span className="text-xs text-muted-foreground">{tx.toChain}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            tx.status === "completed"
-                              ? "success"
-                              : tx.status === "in progress"
-                                ? "outline"
-                                : "destructive"
-                          }
-                          className={
-                            tx.status === "completed"
-                              ? "bg-green-500/10 text-green-500 hover:bg-green-500/20 hover:text-green-500"
-                              : tx.status === "failed"
-                                ? "bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-500"
-                                : ""
-                          }
-                        >
-                          {tx.status === "completed"
-                            ? "Completed"
-                            : tx.status === "in progress"
-                              ? "In Progress"
-                              : "Failed"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{tx.time}</TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs">{tx.txHash}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <ExternalLink className="h-4 w-4" />
-                          <span className="sr-only">View transaction</span>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {transactions.slice(3, 6).map((tx) => {
+                    const { variant, className, label } = getBadgeProps(tx.status)
+                    return (
+                      <TableRow key={tx.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {tx.fromAmount} {tx.fromAsset}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{tx.fromChain}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {tx.toAmount} {tx.toAsset}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{tx.toChain}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={variant} className={className}>
+                            {label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{tx.time}</TableCell>
+                        <TableCell>
+                          <span className="font-mono text-xs">{tx.txHash}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" aria-label={`View transaction ${tx.txHash}`}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Wallet, Info } from "lucide-react"
+import { Wallet, Info, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
@@ -16,44 +16,100 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { createWalletClient, custom, getAddress, type WalletClient } from "viem"
+import { mainnet, base, optimism, arbitrum } from "viem/chains"
 
 export function ExchangeComponent() {
   // State for exchange form
   const [isWalletConnected, setIsWalletConnected] = useState(false)
   const [walletAddress, setWalletAddress] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [walletClient, setWalletClient] = useState<WalletClient | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   // ETH request state
   const [targetChain, setTargetChain] = useState("optimism")
   const [ethAmount, setEthAmount] = useState("0.01")
   const [recipientAddress, setRecipientAddress] = useState("")
   const [paymentMethod, setPaymentMethod] = useState("usdc")
-  const [paymentChain, setPaymentChain] = useState("polygon")
+  const [paymentChain, setPaymentChain] = useState("base")
   const [paymentAmount, setPaymentAmount] = useState("18")
 
   // Chain options for ETH
   const ethChains = [
+    { id: "ethereum", name: "Ethereum", gasEstimate: "0.005 ETH" },
     { id: "optimism", name: "Optimism", gasEstimate: "0.001 ETH" },
     { id: "arbitrum", name: "Arbitrum", gasEstimate: "0.0008 ETH" },
     { id: "base", name: "Base", gasEstimate: "0.0005 ETH" },
     { id: "zksync", name: "zkSync", gasEstimate: "0.0003 ETH" },
+    { id: "linea", name: "Linea", gasEstimate: "0.0004 ETH" },
+    { id: "scroll", name: "Scroll", gasEstimate: "0.0006 ETH" },
+    { id: "metis", name: "Metis", gasEstimate: "0.0004 ETH" },
+    { id: "mantle", name: "Mantle", gasEstimate: "0.0003 ETH" },
+    { id: "mode", name: "Mode", gasEstimate: "0.0004 ETH" },
     { id: "polygon", name: "Polygon", gasEstimate: "0.1 MATIC" },
   ]
 
-  // Payment options
-  const paymentCryptos = [
-    { id: "usdc", name: "USDC", chains: ["ethereum", "polygon", "arbitrum", "optimism", "base"] },
-    { id: "usdt", name: "USDT", chains: ["ethereum", "tron", "polygon", "bsc"] },
-    { id: "dai", name: "DAI", chains: ["ethereum", "polygon", "optimism"] },
-    { id: "bnb", name: "BNB", chains: ["bsc"] },
-    { id: "matic", name: "MATIC", chains: ["polygon", "ethereum"] },
-    { id: "sol", name: "SOL", chains: ["solana"] },
+  // Payment options - only tokens available on Base
+  const baseTokens = [
+    { id: "usdc", name: "USDC" },
+    { id: "eth", name: "ETH" },
+    { id: "weth", name: "WETH" },
+    { id: "dai", name: "DAI" },
+    { id: "usdt", name: "USDT" },
   ]
+
+  // Check if wallet is already connected on component mount
+  useEffect(() => {
+    const checkWalletConnection = async () => {
+      try {
+        // Check if ethereum object exists (MetaMask or other injected wallet)
+        if (typeof window !== "undefined" && window.ethereum) {
+          // Get connected accounts
+          const accounts = await window.ethereum.request({ method: "eth_accounts" })
+
+          if (accounts && accounts.length > 0) {
+            const address = getAddress(accounts[0]) // Normalize the address
+            setWalletAddress(address)
+            setRecipientAddress(address)
+            setIsWalletConnected(true)
+
+            // Create wallet client
+            const client = createWalletClient({
+              chain: getChainForTarget(targetChain),
+              transport: custom(window.ethereum),
+            })
+            setWalletClient(client)
+          }
+        }
+      } catch (error) {
+        console.error("Error checking wallet connection:", error)
+      }
+    }
+
+    checkWalletConnection()
+  }, [targetChain])
+
+  // Get viem chain object for the selected target chain
+  const getChainForTarget = (chainId: string) => {
+    switch (chainId) {
+      case "ethereum":
+        return mainnet
+      case "base":
+        return base
+      case "optimism":
+        return optimism
+      case "arbitrum":
+        return arbitrum
+      default:
+        return mainnet // Default to mainnet
+    }
+  }
 
   // Get available chains for selected payment method
   const getPaymentChains = (cryptoId) => {
-    const crypto = paymentCryptos.find((c) => c.id === cryptoId)
-    return crypto ? crypto.chains : []
+    // For now, only return base regardless of the payment method
+    return ["base"]
   }
 
   // Handle chain selection
@@ -69,6 +125,15 @@ export function ExchangeComponent() {
         setEthAmount("0.01") // For ETH
       }
     }
+
+    // Update wallet client with new chain if connected
+    if (isWalletConnected && window.ethereum) {
+      const client = createWalletClient({
+        chain: getChainForTarget(value),
+        transport: custom(window.ethereum),
+      })
+      setWalletClient(client)
+    }
   }
 
   // Handle ETH amount change
@@ -78,12 +143,10 @@ export function ExchangeComponent() {
     const numValue = Number.parseFloat(value) || 0
     if (paymentMethod === "usdc" || paymentMethod === "usdt" || paymentMethod === "dai") {
       setPaymentAmount((numValue * 1800).toString())
-    } else if (paymentMethod === "bnb") {
-      setPaymentAmount((numValue * 10).toString())
-    } else if (paymentMethod === "matic") {
-      setPaymentAmount(((numValue * 1800) / 0.7).toString())
-    } else if (paymentMethod === "sol") {
-      setPaymentAmount(((numValue * 1800) / 60).toString())
+    } else if (paymentMethod === "eth" || paymentMethod === "weth") {
+      setPaymentAmount(numValue.toString())
+    } else {
+      setPaymentAmount((numValue * 1800).toString()) // Default to stablecoin rate
     }
   }
 
@@ -100,30 +163,69 @@ export function ExchangeComponent() {
     handleEthAmountChange(ethAmount)
   }
 
-  // Connect wallet function
-  const connectWallet = (walletType) => {
+  // Connect wallet function using viem
+  const connectWallet = async (walletType: string) => {
     setIsLoading(true)
 
-    // Simulate wallet connection - in a real app, you would use ethers.js or web3.js
-    setTimeout(() => {
-      setIsWalletConnected(true)
-      setWalletAddress("0x1234...5678")
-      setRecipientAddress("0x1234...5678") // Auto-fill recipient with connected wallet
+    try {
+      if (typeof window === "undefined" || !window.ethereum) {
+        alert("Please install MetaMask or another Ethereum wallet to connect")
+        setIsLoading(false)
+        return
+      }
+
+      // Request account access
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
+
+      if (accounts && accounts.length > 0) {
+        const address = getAddress(accounts[0]) // Normalize the address
+
+        // Create wallet client
+        const client = createWalletClient({
+          chain: getChainForTarget(targetChain),
+          transport: custom(window.ethereum),
+        })
+
+        setWalletClient(client)
+        setWalletAddress(address)
+        setRecipientAddress(address)
+        setIsWalletConnected(true)
+        setDialogOpen(false) // Close the dialog
+      }
+    } catch (error) {
+      console.error("Error connecting wallet:", error)
+      alert("Failed to connect wallet. Please try again.")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   // Request ETH function
-  const requestEth = () => {
+  const requestEth = async () => {
     setIsLoading(true)
 
-    // Simulate order creation - in a real app, this would interact with smart contracts or backend
-    setTimeout(() => {
+    try {
+      if (!walletClient) {
+        throw new Error("Wallet not connected")
+      }
+
+      // In a real app, you would interact with a smart contract here
+      // For this demo, we'll just show a success message
       alert(
         `ETH Request Created: ${ethAmount} ETH on ${targetChain} to be sent to ${recipientAddress}. You will pay ${paymentAmount} ${paymentMethod.toUpperCase()} on ${paymentChain}.`,
       )
+    } catch (error) {
+      console.error("Error requesting ETH:", error)
+      alert("Failed to request ETH. Please try again.")
+    } finally {
       setIsLoading(false)
-    }, 2000)
+    }
+  }
+
+  // Format address for display
+  const formatAddress = (address: string) => {
+    if (!address) return ""
+    return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
   return (
@@ -136,7 +238,7 @@ export function ExchangeComponent() {
           </div>
           {isWalletConnected && (
             <Badge variant="outline" className="px-2 py-1">
-              {walletAddress}
+              {formatAddress(walletAddress)}
             </Badge>
           )}
         </div>
@@ -149,10 +251,10 @@ export function ExchangeComponent() {
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select chain" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" className="max-h-[300px] overflow-y-auto">
               {ethChains.map((chain) => (
                 <SelectItem key={chain.id} value={chain.id}>
-                  {chain.name} (Est. gas: {chain.gasEstimate})
+                  {chain.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -163,7 +265,6 @@ export function ExchangeComponent() {
         <div className="space-y-2">
           <div className="flex justify-between">
             <Label htmlFor="eth-amount">ETH Amount</Label>
-            <span className="text-xs text-muted-foreground">For gas fees (~5-10 transactions)</span>
           </div>
           <div className="flex gap-2">
             <Input
@@ -201,14 +302,15 @@ export function ExchangeComponent() {
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select payment method" />
             </SelectTrigger>
-            <SelectContent>
-              {paymentCryptos.map((crypto) => (
-                <SelectItem key={crypto.id} value={crypto.id}>
-                  {crypto.name}
+            <SelectContent position="popper" className="max-h-[300px] overflow-y-auto">
+              {baseTokens.map((token) => (
+                <SelectItem key={token.id} value={token.id}>
+                  {token.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <div className="text-xs text-muted-foreground">Only showing tokens available on Base</div>
         </div>
 
         {/* Payment Chain */}
@@ -218,15 +320,11 @@ export function ExchangeComponent() {
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select payment network" />
             </SelectTrigger>
-            <SelectContent>
-              {getPaymentChains(paymentMethod).map((chainId) => {
-                const chainName = chainId.charAt(0).toUpperCase() + chainId.slice(1)
-                return (
-                  <SelectItem key={chainId} value={chainId}>
-                    {chainName}
-                  </SelectItem>
-                )
-              })}
+            <SelectContent position="popper" className="max-h-[300px] overflow-y-auto">
+              <SelectItem value="base">Base</SelectItem>
+              <div className="px-2 py-2 text-xs text-muted-foreground italic border-t mt-1">
+                More payment networks coming soon...
+              </div>
             </SelectContent>
           </Select>
         </div>
@@ -263,47 +361,59 @@ export function ExchangeComponent() {
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-3">
         {!isWalletConnected ? (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600">
-                <Wallet className="mr-2 h-4 w-4" /> Connect Wallet to Continue
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Connect your wallet</DialogTitle>
-                <DialogDescription>Choose your preferred wallet provider to connect to kaETH.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
+          <>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
                 <Button
-                  onClick={() => connectWallet("metamask")}
-                  className="flex items-center justify-between"
-                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
+                  onClick={() => setDialogOpen(true)}
                 >
-                  <span>MetaMask</span>
-                  <img src="/placeholder.svg?height=24&width=24" alt="MetaMask" className="h-6 w-6" />
+                  <Wallet className="mr-2 h-4 w-4" /> Connect Wallet
                 </Button>
-                <Button
-                  onClick={() => connectWallet("walletconnect")}
-                  className="flex items-center justify-between"
-                  disabled={isLoading}
-                >
-                  <span>WalletConnect</span>
-                  <img src="/placeholder.svg?height=24&width=24" alt="WalletConnect" className="h-6 w-6" />
-                </Button>
-                <Button
-                  onClick={() => connectWallet("coinbase")}
-                  className="flex items-center justify-between"
-                  disabled={isLoading}
-                >
-                  <span>Coinbase Wallet</span>
-                  <img src="/placeholder.svg?height=24&width=24" alt="Coinbase Wallet" className="h-6 w-6" />
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Connect your wallet</DialogTitle>
+                  <DialogDescription>Choose your preferred wallet provider to connect to kaETH.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <Button
+                    onClick={() => connectWallet("metamask")}
+                    className="flex items-center justify-between"
+                    disabled={isLoading}
+                  >
+                    <span>MetaMask</span>
+                    <img src="/placeholder.svg?height=24&width=24" alt="MetaMask" className="h-6 w-6" />
+                  </Button>
+                  <Button
+                    onClick={() => connectWallet("walletconnect")}
+                    className="flex items-center justify-between"
+                    disabled={isLoading}
+                  >
+                    <span>WalletConnect</span>
+                    <img src="/placeholder.svg?height=24&width=24" alt="WalletConnect" className="h-6 w-6" />
+                  </Button>
+                  <Button
+                    onClick={() => connectWallet("coinbase")}
+                    className="flex items-center justify-between"
+                    disabled={isLoading}
+                  >
+                    <span>Coinbase Wallet</span>
+                    <img src="/placeholder.svg?height=24&width=24" alt="Coinbase Wallet" className="h-6 w-6" />
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2"
+              onClick={() => window.open("https://base.org/ecosystem", "_blank")}
+            >
+              Connect with Base Wallet <ExternalLink className="h-4 w-4" />
+            </Button>
+          </>
         ) : (
           <Button
             className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
@@ -316,4 +426,14 @@ export function ExchangeComponent() {
       </CardFooter>
     </Card>
   )
+}
+
+// Add TypeScript interface for window.ethereum
+declare global {
+  interface Window {
+    ethereum?: {
+      isMetaMask?: boolean
+      request: (args: { method: string; params?: any[] }) => Promise<any>
+    }
+  }
 }
